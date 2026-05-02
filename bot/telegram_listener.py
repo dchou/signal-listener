@@ -209,6 +209,40 @@ class SignalListener:
         print(f"[TG]    [Signal]: {json.dumps(signal)}")
         await self._send_signal(source=source, timestamp=pub_str, category=category, signal=signal)
 
+    async def _call_webhook(self, signal: dict) -> str:
+        cfg = self.config
+        if not all([cfg.WEBHOOK_URL, cfg.WEBHOOK_SECRET, cfg.WEBHOOK_EXCHANGE, cfg.WEBHOOK_AMOUNT]):
+            return ""
+
+        symbol = signal["symbol"].replace("_", "/")
+        payload: dict = {
+            "secret":      cfg.WEBHOOK_SECRET,
+            "exchange":    cfg.WEBHOOK_EXCHANGE,
+            "symbol":      symbol,
+            "side":        signal["direction"].lower(),
+            "amount":      cfg.WEBHOOK_AMOUNT,
+            "market_type": cfg.WEBHOOK_MARKET_TYPE,
+        }
+        if isinstance(signal["entry"], float):
+            payload["price"] = signal["entry"]
+
+        import aiohttp
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    cfg.WEBHOOK_URL, json=payload,
+                    timeout=aiohttp.ClientTimeout(total=10)
+                ) as resp:
+                    data = await resp.json()
+                    if data.get("ok"):
+                        print(f"[WH] Order placed: {symbol} {payload['side']}")
+                        return "🔗 Order sent"
+                    print(f"[WH] Order rejected: {data}")
+                    return "❌ Order failed"
+        except Exception as e:
+            print(f"[WH] Webhook error: {e}")
+            return "❌ Order failed"
+
     async def _send_signal(
         self, source: str, timestamp: str, category: str, signal: dict
     ) -> None:
@@ -237,6 +271,10 @@ class SignalListener:
             lines.append(f"⚡ Leverage: {signal['leverage']}")
         if signal.get("amount"):
             lines.append(f"💰 Amount: {signal['amount']}")
+
+        webhook_status = await self._call_webhook(signal)
+        if webhook_status:
+            lines.append(webhook_status)
 
         alert_text = "\n".join(lines)
         bot = Bot(token=self.config.TELEGRAM_BOT_TOKEN)

@@ -58,6 +58,22 @@ class Config:
         default_factory=lambda: int(os.getenv("WEBHOOK_PORT", "8080"))
     )
 
+    WEBHOOK_URL: str = field(
+        default_factory=lambda: os.getenv("WEBHOOK_URL", "")
+    )
+    WEBHOOK_SECRET: str = field(
+        default_factory=lambda: os.getenv("WEBHOOK_SECRET", "")
+    )
+    WEBHOOK_EXCHANGE: str = field(
+        default_factory=lambda: os.getenv("WEBHOOK_EXCHANGE", "")
+    )
+    WEBHOOK_AMOUNT: float = field(
+        default_factory=lambda: float(os.getenv("WEBHOOK_AMOUNT", "0"))
+    )
+    WEBHOOK_MARKET_TYPE: str = field(
+        default_factory=lambda: os.getenv("WEBHOOK_MARKET_TYPE", "spot")
+    )
+
     def get_all_channels(self) -> dict[str, list]:
         return {
             "CRYPTO": self.TELEGRAM_CHANNELS_CRYPTO,
