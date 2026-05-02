@@ -67,8 +67,8 @@ class Config:
     WEBHOOK_EXCHANGE: str = field(
         default_factory=lambda: os.getenv("WEBHOOK_EXCHANGE", "")
     )
-    WEBHOOK_AMOUNT: float = field(
-        default_factory=lambda: float(os.getenv("WEBHOOK_AMOUNT", "0"))
+    WEBHOOK_USDT_AMOUNT: float = field(
+        default_factory=lambda: float(os.getenv("WEBHOOK_USDT_AMOUNT", "0"))
     )
     WEBHOOK_MARKET_TYPE: str = field(
         default_factory=lambda: os.getenv("WEBHOOK_MARKET_TYPE", "spot")

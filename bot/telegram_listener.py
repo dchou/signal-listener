@@ -209,18 +209,36 @@ class SignalListener:
         print(f"[TG]    [Signal]: {json.dumps(signal)}")
         await self._send_signal(source=source, timestamp=pub_str, category=category, signal=signal)
 
+    @staticmethod
+    def _entry_price(entry) -> float | None:
+        if isinstance(entry, (int, float)):
+            return float(entry)
+        if isinstance(entry, str):
+            parts = entry.split("-")
+            try:
+                return (float(parts[0]) + float(parts[-1])) / 2
+            except (ValueError, IndexError):
+                pass
+        return None
+
     async def _call_webhook(self, signal: dict) -> str:
         cfg = self.config
-        if not all([cfg.WEBHOOK_URL, cfg.WEBHOOK_SECRET, cfg.WEBHOOK_EXCHANGE, cfg.WEBHOOK_AMOUNT]):
+        if not all([cfg.WEBHOOK_URL, cfg.WEBHOOK_SECRET, cfg.WEBHOOK_EXCHANGE, cfg.WEBHOOK_USDT_AMOUNT]):
             return ""
 
+        price = self._entry_price(signal["entry"])
+        if price is None:
+            print("[WH] Cannot compute amount: no usable entry price")
+            return "❌ Order failed"
+
         symbol = signal["symbol"].replace("_", "/")
+        amount = round(cfg.WEBHOOK_USDT_AMOUNT / price, 6)
         payload: dict = {
             "secret":      cfg.WEBHOOK_SECRET,
             "exchange":    cfg.WEBHOOK_EXCHANGE,
             "symbol":      symbol,
             "side":        signal["direction"].lower(),
-            "amount":      cfg.WEBHOOK_AMOUNT,
+            "amount":      amount,
             "market_type": cfg.WEBHOOK_MARKET_TYPE,
         }
         if isinstance(signal["entry"], float):

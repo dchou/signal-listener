@@ -158,10 +158,10 @@ At least one channel list must be non-empty to start. The `@` prefix in channel 
 | `WEBHOOK_URL` | Webhook endpoint, e.g. `https://xchange-line.ezcoin.cc/webhook/tradingview` |
 | `WEBHOOK_SECRET` | Your personal secret token from `/mywebhook` in the LINE bot |
 | `WEBHOOK_EXCHANGE` | Exchange to execute on, e.g. `bybit`, `binance` |
-| `WEBHOOK_AMOUNT` | Order size in base currency, e.g. `0.01` |
+| `WEBHOOK_USDT_AMOUNT` | Order size in USDT, e.g. `50` — base amount is computed as `USDT_AMOUNT / entry_price` |
 | `WEBHOOK_MARKET_TYPE` | `spot` or `swap` (default: `spot`) |
 
-All four non-default fields must be set for webhook order placement to activate.
+All four non-default fields must be set for webhook order placement to activate. See [docs/webhook-order-placement.md](docs/webhook-order-placement.md) for amount calculation details.
 
 ## Project structure
 
