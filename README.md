@@ -1,12 +1,13 @@
 # Signal Listener
 
-Monitors Telegram trading channels, parses signal messages into structured data, and forwards formatted alerts via a Telegram bot.
+Monitors Telegram trading channels, parses signal messages into structured data, automatically places orders via a webhook, and forwards formatted alerts via a Telegram bot.
 
 ## How it works
 
 1. Connects to Telegram as a user account (Telethon) and subscribes to configured channels
-2. On each new message, runs `parse_signal()` — a regex parser that extracts symbol, direction, entry, take-profits, stop-loss, exchange, leverage, and amount
-3. If a signal is found, logs it as JSON and sends a formatted alert to your bot chat
+2. On each new message, runs `parse_signal()` — a regex parser that extracts symbol, direction, entry, take-profits, stop-loss, and exchange
+3. If a signal is found, POSTs an order to the [xchange-line-bot](https://github.com/dchou/xchange-mcp-line-bot) webhook (if configured) — the bot executes the trade and notifies you via LINE
+4. Sends a formatted Telegram alert with the order status (`🔗 Order sent` / `❌ Order failed`) appended
 
 Non-signal messages (news, promo, chatter) are silently dropped. On disconnect, the listener reconnects automatically with exponential backoff (5 s → 10 s → … → 300 s max).
 
@@ -135,6 +136,8 @@ On first run, Telethon will prompt for your phone number and a verification code
 
 ## Configuration
 
+**Telegram listener**
+
 | Variable | Required | Description |
 |---|---|---|
 | `TELEGRAM_API_ID` | Yes | From [my.telegram.org](https://my.telegram.org) → API development tools |
@@ -148,6 +151,18 @@ On first run, Telethon will prompt for your phone number and a verification code
 
 At least one channel list must be non-empty to start. The `@` prefix in channel names is optional.
 
+**Order placement webhook** (optional — see [docs/webhook-order-placement.md](docs/webhook-order-placement.md))
+
+| Variable | Description |
+|---|---|
+| `WEBHOOK_URL` | Webhook endpoint, e.g. `https://xchange-line.ezcoin.cc/webhook/tradingview` |
+| `WEBHOOK_SECRET` | Your personal secret token from `/mywebhook` in the LINE bot |
+| `WEBHOOK_EXCHANGE` | Exchange to execute on, e.g. `bybit`, `binance` |
+| `WEBHOOK_AMOUNT` | Order size in base currency, e.g. `0.01` |
+| `WEBHOOK_MARKET_TYPE` | `spot` or `swap` (default: `spot`) |
+
+All four non-default fields must be set for webhook order placement to activate.
+
 ## Project structure
 
 ```
@@ -155,15 +170,13 @@ main.py                  # Entry point
 config.py                # Loads and validates env vars
 bot/
   telegram_listener.py   # SignalListener class + parse_signal()
+docs/
+  webhook-order-placement.md  # Webhook integration guide
 sessions/                # Telethon session files (auto-created, gitignored)
 ```
 
-## Adding order logic
+## Webhook order placement
 
-`_send_signal()` in `bot/telegram_listener.py` receives the parsed `signal` dict before sending the Telegram alert. Add your order placement code there:
+When `WEBHOOK_URL`, `WEBHOOK_SECRET`, `WEBHOOK_EXCHANGE`, and `WEBHOOK_AMOUNT` are all set, each parsed signal automatically triggers an order via the xchange-line-bot webhook. The bot executes the trade on the configured exchange and pushes the result to LINE.
 
-```python
-async def _send_signal(self, source, timestamp, category, signal):
-    # place your order here using signal["symbol"], signal["direction"], etc.
-    ...
-```
+See [docs/webhook-order-placement.md](docs/webhook-order-placement.md) for payload mapping, example alerts, and setup instructions.
